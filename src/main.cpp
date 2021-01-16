@@ -230,7 +230,7 @@ TaskHandle_t xHandleEInk = NULL;
 TaskHandle_t xHandleWeather = NULL;
 
 #ifdef XCTRACER
-TaskHandle_t xXCTracer = NULL;
+TaskHandle_t xHandleXCTracer = NULL;
 cbuf *BLE_FIFO_RX;
 #endif
 
@@ -1796,7 +1796,7 @@ void setup()
 #endif
 
 #ifdef XCTRACER
-  xTaskCreatePinnedToCore(taskXCTracer, "taskXCTracer", 4096, NULL, 7, &xXCTracer, ARDUINO_RUNNING_CORE1);
+  xTaskCreatePinnedToCore(taskXCTracer, "taskXCTracer", 4096, NULL, 7, &xHandleXCTracer, ARDUINO_RUNNING_CORE1);
 #endif
 
 #ifdef GSMODULE
@@ -2269,7 +2269,6 @@ void notifyXCTracerCallback(NimBLERemoteCharacteristic *pBLERemoteCharacteristic
 {
   if (isNotify)
   {
-
     BLE_FIFO_RX->write((char *)pData, length);
   }
 }
@@ -2290,18 +2289,16 @@ void taskXCTracer(void *pvParameters)
 
   esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
   esp_bt_controller_enable(ESP_BT_MODE_BLE);
-  log_i("currHeap:%d,minHeap:%d", xPortGetFreeHeapSize(), xPortGetMinimumEverFreeHeapSize());
-  start_xctracer(NULL, host_name + "-LE");
+  //log_i("currHeap:%d,minHeap:%d", xPortGetFreeHeapSize(), xPortGetMinimumEverFreeHeapSize());
+  start_xctracer(notifyXCTracerCallback, host_name + "-LE");
   status.bluetoothStat = 1;
 
   while (1)
   {
     loop_xctracer();
+    delay(10000);
   }
 
-  log_i("stop xctracer task");
-
-  
 }
 
 void taskBluetooth(void *pvParameters)
@@ -2920,12 +2917,12 @@ void readGPS()
   static char lineBuffer[255];
   static uint16_t recBufferIndex = 0;
 
-  while (NMeaSerial.available())
+  while (BLE_FIFO_RX->available())
   {
 
     if (recBufferIndex >= 255)
       recBufferIndex = 0; //Buffer overrun
-    lineBuffer[recBufferIndex] = NMeaSerial.read();
+    lineBuffer[recBufferIndex] = BLE_FIFO_RX->read();
     //log_i("GPS %c",lineBuffer[recBufferIndex]);
     nmea.process(lineBuffer[recBufferIndex]);
     if (lineBuffer[recBufferIndex] == '\n')

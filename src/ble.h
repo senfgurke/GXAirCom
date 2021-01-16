@@ -29,8 +29,8 @@ NimBLECharacteristic *pCharacteristic;
 
 #ifdef XCTRACER
 
-static NimBLEUUID xserviceUUID("0000FFE0-0000-1000-8000-00805F9B34FB");
-static NimBLEUUID xcharUUID("0000FFE1-0000-1000-8000-00805F9B34FB");
+static NimBLEUUID xserviceUUID("ffe0");
+static NimBLEUUID xcharUUID("ffe1");
 
 static bool doConnect = false;
 static bool connected = false;
@@ -65,7 +65,7 @@ class clsXCTracerAdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallba
 		if (advertisedDevice->haveServiceUUID() && advertisedDevice->isAdvertisingService(xserviceUUID))
 		{
 			NimBLEDevice::getScan()->stop();
-			pXCTracer = new NimBLEAdvertisedDevice advertisedDevice ;
+			pXCTracer = advertisedDevice;
 			doConnect = true;
 			doScan = true;
 		
@@ -79,13 +79,26 @@ bool connectToXC()
 	NimBLEClient *pClient = NimBLEDevice::createClient();
 
 	pClient->setClientCallbacks(new clsClientCallbacks());
-	pClient->connect(pXCTracer);
-	log_i(" - Connected to xctracer");
+	 if(!pClient->connect(pXCTracer)){
+		 log_w("could not connect");
+	 }
+	 log_i(" - Connected to xctracer");
 
 	NimBLERemoteService *pRemoteService = pClient->getService(xserviceUUID);
+
+	std::vector<NimBLERemoteService *> *services = pClient->getServices();
+
+	for (int i = 0; i < services->size(); i++) {
+
+		  std::string str = services->at(i)->getUUID().toString();
+
+
+	}
+	
 	if (pRemoteService == nullptr)
 	{
-		pClient->disconnect();
+		 NimBLEDevice::deleteClient(pClient);
+		
 		return false;
 	}
 
@@ -95,12 +108,12 @@ bool connectToXC()
 	pXCTracerCharacteristic = pRemoteService->getCharacteristic(xcharUUID);
 	if (pXCTracerCharacteristic == nullptr)
 	{
-		pClient->disconnect();
+	 NimBLEDevice::deleteClient(pClient);
 		return false;
 	}
 
 	if (pXCTracerCharacteristic->canNotify())
-		pXCTracerCharacteristic->registerForNotify(_notifyXCTracerCallback);
+		pXCTracerCharacteristic->subscribe(true,_notifyXCTracerCallback);
 
 	connected = true;
 	return true;
@@ -116,8 +129,11 @@ void start_xctracer(notify_callback callback, String bleId)
 
 	NimBLEScan *pBLEScan = NimBLEDevice::getScan();
 	pBLEScan->setAdvertisedDeviceCallbacks(new clsXCTracerAdvertisedDeviceCallbacks());
+	pBLEScan->setInterval(1349);
+    pBLEScan->setWindow(449);
+	
 	pBLEScan->setActiveScan(true);
-	pBLEScan->start(5, false);
+	pBLEScan->start(5);
 
 
 	
@@ -141,6 +157,7 @@ void loop_xctracer()
 
 	if (connected)
 	{
+		log_i("XCTracer still connected.");
 		//std::string value = pRemoteCharacteristic->readValue();
 
 		//Data!
@@ -150,7 +167,7 @@ void loop_xctracer()
 	else if (doScan)
 	{
 		log_i("search for XCTracer.");
-		NimBLEDevice::getScan()->start(0); // this is just eample to start scan after disconnect, most likely there is better way to do it in arduino
+		NimBLEDevice::getScan()->start(5); // this is just eample to start scan after disconnect, most likely there is better way to do it in arduino
 	}
 }
 
