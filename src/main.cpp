@@ -342,7 +342,9 @@ void drawWifiStat(int wifiStat)
 void setupAXP192();
 void taskStandard(void *pvParameters);
 void taskBackGround(void *pvParameters);
+#ifdef XCTRACER
 void taskXCTracer(void *pvParameters);
+#endif
 void taskBluetooth(void *pvParameters);
 void taskMemory(void *pvParameters);
 void setupWifi();
@@ -2273,8 +2275,6 @@ void notifyXCTracerCallback(NimBLERemoteCharacteristic *pBLERemoteCharacteristic
   }
 }
 
-#endif
-
 void taskXCTracer(void *pvParameters)
 {
 
@@ -2298,8 +2298,8 @@ void taskXCTracer(void *pvParameters)
     loop_xctracer();
     delay(10000);
   }
-
 }
+#endif
 
 void taskBluetooth(void *pvParameters)
 {
@@ -2917,12 +2917,21 @@ void readGPS()
   static char lineBuffer[255];
   static uint16_t recBufferIndex = 0;
 
+#ifdef XCTRACER
   while (BLE_FIFO_RX->available())
+#else
+  while (NMeaSerial.available())
+#endif
   {
 
     if (recBufferIndex >= 255)
       recBufferIndex = 0; //Buffer overrun
+#ifdef XCTRACER
     lineBuffer[recBufferIndex] = BLE_FIFO_RX->read();
+#else
+    lineBuffer[recBufferIndex] = NMeaSerial.read();
+#endif
+
     //log_i("GPS %c",lineBuffer[recBufferIndex]);
     nmea.process(lineBuffer[recBufferIndex]);
     if (lineBuffer[recBufferIndex] == '\n')
@@ -3113,6 +3122,8 @@ void taskStandard(void *pvParameters)
   MyFanetData.rssi = 0;
 
 #ifdef AIRMODULE
+
+#ifndef XCTRACER
   if (status.bHasAXP192)
   {
     NMeaSerial.begin(GPSBAUDRATE, SERIAL_8N1, 34, 12, false);
@@ -3145,6 +3156,9 @@ void taskStandard(void *pvParameters)
     attachInterrupt(digitalPinToInterrupt(PPSPIN), ppsHandler, FALLING);
   }
 #endif
+
+#endif
+
 #ifdef GSMODULE
   //mode ground-station
   status.GPS_Lat = setting.gs.lat;
