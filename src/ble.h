@@ -67,7 +67,7 @@ class clsXCTracerAdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallba
 			NimBLEDevice::getScan()->stop();
 			pXCTracer = advertisedDevice;
 			doConnect = true;
-			doScan = true;
+			doScan = false;
 		
 		} 
 		
@@ -133,8 +133,9 @@ void start_xctracer(notify_callback callback, String bleId)
     pBLEScan->setWindow(449);
 	
 	pBLEScan->setActiveScan(true);
-	pBLEScan->start(5);
-
+	doScan=true;
+	pBLEScan->start(3);
+	doScan=false;
 
 	
 }
@@ -150,7 +151,7 @@ void loop_xctracer()
 		}
 		else
 		{
-			log_i("Failed to connect to XCTracer.");
+			log_w("Failed to connect to XCTracer.");
 		}
 		doConnect = false;
 	}
@@ -164,10 +165,14 @@ void loop_xctracer()
 		//swSer.print(value.c_str());
 		//swSer.println(value.c_str());
 	}
-	else if (doScan)
+	else 
 	{
-		log_i("search for XCTracer.");
-		NimBLEDevice::getScan()->start(5); // this is just eample to start scan after disconnect, most likely there is better way to do it in arduino
+		if(doScan == false){
+		doScan=true;
+		log_w("search for XCTracer.");
+		NimBLEDevice::getScan()->start(3);
+		doScan=false;
+		}
 	}
 }
 

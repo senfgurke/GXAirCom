@@ -2296,7 +2296,7 @@ void taskXCTracer(void *pvParameters)
   while (1)
   {
     loop_xctracer();
-    delay(10000);
+    delay(15000);
   }
 }
 #endif
